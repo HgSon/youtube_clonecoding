@@ -2,6 +2,7 @@ import routes from "../routes.js";
 import User from "../models/User";
 import passport from "passport";
 
+//join
 export const getJoin = (req, res) => res.render("join", { pageTitle: "Join" });
 export const postJoin = async (req, res, next) => {
   const {
@@ -23,6 +24,7 @@ export const postJoin = async (req, res, next) => {
   //status code
 };
 
+//login
 export const getLogin = (req, res) =>
   res.render("login", { pageTitle: "Login" });
 export const postLogin = passport.authenticate("local", {
@@ -30,14 +32,131 @@ export const postLogin = passport.authenticate("local", {
   successRedirect: routes.home,
 });
 
-export const logout = (req, res) => {
-  //to do: log out
+//githublogin
+export const githubLogin = passport.authenticate("github");
+
+//for passport
+export const githubLoginCallback = async (_, __, profile, cb) => {
+  const {
+    _json: { id, avatar_url, login },
+  } = profile;
+  const email = profile._json.email || process.env.GH_EMAIL;
+  try {
+    const user = await User.findOne({ email });
+    if (user) {
+      user.githubId = id;
+      user.save();
+      return cb(null, user);
+    }
+    const newUser = await User.create({
+      githubId: id,
+      avatarUrl: avatar_url,
+      email,
+      name: login, //바꾸고나서 db에 이름안들어감. 체크
+    });
+    return cb(null, newUser);
+  } catch (error) {
+    cb(error);
+  }
+};
+export const postGithubLogin = passport.authenticate("github", {
+  failureRedirect: routes.login,
+});
+export const postGithubLoginRedirect = (req, res) => {
   res.redirect(routes.home);
 };
-export const users = (req, res) => res.render("users");
-export const userDetail = (req, res) =>
-  res.render("userDetail", { pageTitle: "User Detail" });
-export const editProfile = (req, res) =>
+
+//facebook login
+export const fbLogin = passport.authenticate("facebook");
+export const fbLoginCallback = async (_, __, profile, cb) => {
+  const {
+    _json: { id, name },
+  } = profile;
+  const email = "park.daum.net";
+  try {
+    const user = await User.findOne({ name });
+    //임시
+    if (user) {
+      user.facebookId = id;
+      user.save();
+      return cb(null, user);
+    }
+    const newUser = await User.create({
+      facebookId: id,
+      name,
+      email,
+      avatarUrl: `https://graph.facebook.com/${id}/picture?type=large`,
+    });
+    return cb(null, newUser);
+  } catch (error) {
+    cb(error);
+  }
+};
+export const postFbLogin = (req, res) => {
+  res.redirect(routes.home);
+};
+
+//logout
+export const logout = (req, res) => {
+  req.logout();
+  res.redirect(routes.home);
+};
+
+export const getMe = (req, res) =>
+  res.render("userDetail", { pageTitle: "User Detail", user: req.user });
+
+export const userDetail = async (req, res) => {
+  const {
+    params: { id },
+  } = req;
+  try {
+    const user = await User.findById({ _id: id }).populate("videos");
+    res.render("userDetail", { pageTitle: "User Detail", user });
+  } catch (error) {
+    console.log(error);
+    res.redirect(routes.home);
+  }
+};
+
+export const getEditProfile = (req, res) => {
   res.render("editProfile", { pageTitle: "Edit Profile" });
-export const changePassword = (req, res) =>
+};
+export const postEditProfile = async (req, res) => {
+  const {
+    body: { name, email },
+  } = req;
+  const { file } = req;
+  try {
+    await User.findByIdAndUpdate(req.user.id, {
+      name,
+      email,
+      avatarUrl: file ? file.path : req.user.avatarUrl,
+    });
+    res.redirect(routes.me);
+  } catch (error) {
+    res.redirect(routes.users + routes.editProfile);
+  }
+};
+
+export const getChangePassword = (req, res) => {
   res.render("changePassword", { pageTitle: "Change Password" });
+};
+
+export const postChangePassword = async (req, res) => {
+  const {
+    body: { currentPassword, newPassword, newPassword2 },
+  } = req;
+  try {
+    if (newPassword !== newPassword2) {
+      res.status(400);
+      res.redirect(routes.users + routes.changePassword);
+      return;
+    }
+    await req.user.changePassword(currentPassword, newPassword);
+    res.redirect(routes.me);
+  } catch (error) {
+    res.status(400);
+    console.log(error);
+    res.redirect(routes.users + routes.changePassword);
+  }
+};

@@ -11,6 +11,11 @@
       width: 100px;
       margin-bottom: 15px;
     }
+    .video__author {
+      a {
+        color: #3498db;
+      }
+    }
     .video__title,
     .video__views,
     .video__description {
@@ -30,8 +35,40 @@
   }
   .video__comments {
     margin-top: 25px;
+    text-align: center;
     .video__comments-number {
       font-size: 18px;
+    }
+    .add__comment {
+      margin-top: 25px;
+      width: 100%;
+      input {
+        width: 100%;
+      }
+    }
+    .video__comments-list {
+      margin-top: 60px;
+      li {
+        background-color: #3498db;
+        color: white;
+        padding: 15px;
+        border-radius: 20px;
+        border-bottom-left-radius: 0px;
+        position: relative;
+        &:not(:last-child) {
+          margin-bottom: 15px;
+        }
+        .comment-delete {
+          width: 15px;
+          height: 15px;
+          padding: 0px;
+          font-size: 12px;
+          text-align: center;
+          position: absolute;
+          top: 7px;
+          right: 10px;
+        }
+      }
     }
   }
 }
